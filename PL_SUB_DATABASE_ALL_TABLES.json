@@ -1,0 +1,161 @@
+{
+    "name": "PL_SUB_DATABASE_ALL_TABLES",
+    "properties": {
+        "activities": [
+            {
+                "name": "ACT_ITRC_IF_INCREMENTAL_TABLES_OR_NOT",
+                "type": "IfCondition",
+                "dependsOn": [],
+                "userProperties": [],
+                "typeProperties": {
+                    "expression": {
+                        "value": "@or(equals(pipeline().parameters.PRM_PL_Source_Table, 'ORDER_DETAILS'),equals(pipeline().parameters.PRM_PL_Source_Table,'ORDER_HEADER'))",
+                        "type": "Expression"
+                    },
+                    "ifFalseActivities": [
+                        {
+                            "name": "ACT_MT_COPY_TABLES",
+                            "type": "Copy",
+                            "dependsOn": [],
+                            "policy": {
+                                "timeout": "0.12:00:00",
+                                "retry": 0,
+                                "retryIntervalInSeconds": 30,
+                                "secureOutput": false,
+                                "secureInput": false
+                            },
+                            "userProperties": [],
+                            "typeProperties": {
+                                "source": {
+                                    "type": "SqlServerSource",
+                                    "sqlReaderQuery": {
+                                        "value": "SELECT * FROM @{pipeline().parameters.PRM_PL_Source_Table} order by @{pipeline().parameters.PRM_PL_Incremental_column} ASC;",
+                                        "type": "Expression"
+                                    },
+                                    "queryTimeout": "02:00:00",
+                                    "partitionOption": "None"
+                                },
+                                "sink": {
+                                    "type": "DelimitedTextSink",
+                                    "storeSettings": {
+                                        "type": "AzureBlobFSWriteSettings"
+                                    },
+                                    "formatSettings": {
+                                        "type": "DelimitedTextWriteSettings",
+                                        "quoteAllText": true,
+                                        "fileExtension": ".csv"
+                                    }
+                                },
+                                "enableStaging": false,
+                                "translator": {
+                                    "type": "TabularTranslator",
+                                    "typeConversion": true,
+                                    "typeConversionSettings": {
+                                        "allowDataTruncation": true,
+                                        "treatBooleanAsNumber": false
+                                    }
+                                }
+                            },
+                            "inputs": [
+                                {
+                                    "referenceName": "DS_SQL_SqlServerTable1",
+                                    "type": "DatasetReference",
+                                    "parameters": {
+                                        "PRM_DS_SCHEMA": "dbo",
+                                        "PRM_DS_TABLE": {
+                                            "value": "@pipeline().parameters.PRM_PL_Source_Table",
+                                            "type": "Expression"
+                                        }
+                                    }
+                                }
+                            ],
+                            "outputs": [
+                                {
+                                    "referenceName": "DS_ADLS_RAW_TARGET",
+                                    "type": "DatasetReference",
+                                    "parameters": {
+                                        "PRM_DS_FILE_SYSTEM": {
+                                            "value": "@pipeline().parameters.PRM_PL_Target_Container",
+                                            "type": "Expression"
+                                        },
+                                        "PRM_DS_FILE_DIRECTORY": {
+                                            "value": "@concat('database/',pipeline().parameters.PRM_PL_Target_FileFolder,'/',pipeline().parameters.PRM_PL_Target_FilePrefix)",
+                                            "type": "Expression"
+                                        },
+                                        "PRM_DS_FILE_NAME": {
+                                            "value": "@pipeline().parameters.PRM_PL_Target_File_Name",
+                                            "type": "Expression"
+                                        },
+                                        "PRM_DS_COLUMN_DELIMITER": ","
+                                    }
+                                }
+                            ]
+                        }
+                    ],
+                    "ifTrueActivities": [
+                        {
+                            "name": "PL_EPIPE_DATABASE_WITH_INCREMENT_LODE_LOGIC",
+                            "type": "ExecutePipeline",
+                            "dependsOn": [],
+                            "policy": {
+                                "secureInput": false
+                            },
+                            "userProperties": [],
+                            "typeProperties": {
+                                "pipeline": {
+                                    "referenceName": "PL_SUB_SOURCE_DATABASE_INCREMENT_LOAD",
+                                    "type": "PipelineReference"
+                                },
+                                "waitOnCompletion": true,
+                                "parameters": {
+                                    "PRM_PL_TableName": {
+                                        "value": "@pipeline().parameters.PRM_PL_Source_Table",
+                                        "type": "Expression"
+                                    },
+                                    "PRM_PL_TableSchema": "dbo",
+                                    "PRM_PL_Incremental_Column": {
+                                        "value": "@pipeline().parameters.PRM_PL_Incremental_column",
+                                        "type": "Expression"
+                                    },
+                                    "PRM_PL_Target_File_System": {
+                                        "value": "@pipeline().parameters.PRM_PL_Target_Container",
+                                        "type": "Expression"
+                                    },
+                                    "PRM_PL_Target_File_Directory": {
+                                        "value": "@concat('database/',pipeline().parameters.PRM_PL_Target_FileFolder,'/',pipeline().parameters.PRM_PL_Target_FilePrefix)",
+                                        "type": "Expression"
+                                    },
+                                    "PRM_PL_Target_File_Name": {
+                                        "value": "@pipeline().parameters.PRM_PL_Target_File_Name",
+                                        "type": "Expression"
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        ],
+        "parameters": {
+            "PRM_PL_Source_Table": {
+                "type": "string"
+            },
+            "PRM_PL_Incremental_column": {
+                "type": "string"
+            },
+            "PRM_PL_Target_Container": {
+                "type": "string"
+            },
+            "PRM_PL_Target_FileFolder": {
+                "type": "string"
+            },
+            "PRM_PL_Target_FilePrefix": {
+                "type": "string"
+            },
+            "PRM_PL_Target_File_Name": {
+                "type": "string"
+            }
+        },
+        "annotations": []
+    }
+}

@@ -1,0 +1,17 @@
+{
+    "name": "DS_ASQL_AzureSqlWatermarkTable",
+    "properties": {
+        "linkedServiceName": {
+            "referenceName": "LS_ASQL_AzureSqlDatabase1",
+            "type": "LinkedServiceReference"
+        },
+        "annotations": [],
+        "type": "AzureSqlTable",
+        "schema": [],
+        "typeProperties": {
+            "schema": "dbo",
+            "table": "WatermarkTable"
+        }
+    },
+    "type": "Microsoft.DataFactory/factories/datasets"
+}

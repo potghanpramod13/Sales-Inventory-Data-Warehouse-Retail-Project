@@ -1,0 +1,181 @@
+{
+    "name": "PL_SUB_COPY_BLOBSTORAGE_FILES",
+    "properties": {
+        "activities": [
+            {
+                "name": "ACT_ITRC_IF_TXT_FLAT_FILE",
+                "type": "IfCondition",
+                "dependsOn": [],
+                "userProperties": [],
+                "typeProperties": {
+                    "expression": {
+                        "value": "@equals(pipeline().parameters.PRM_PL_SRC_COLUMN_DELIMITER,'\\t')",
+                        "type": "Expression"
+                    },
+                    "ifFalseActivities": [
+                        {
+                            "name": "ACT_MT_COPY_FILES",
+                            "type": "Copy",
+                            "dependsOn": [],
+                            "policy": {
+                                "timeout": "0.12:00:00",
+                                "retry": 0,
+                                "retryIntervalInSeconds": 30,
+                                "secureOutput": false,
+                                "secureInput": false
+                            },
+                            "userProperties": [],
+                            "typeProperties": {
+                                "source": {
+                                    "type": "DelimitedTextSource",
+                                    "storeSettings": {
+                                        "type": "AzureBlobFSReadSettings",
+                                        "recursive": true,
+                                        "enablePartitionDiscovery": false
+                                    },
+                                    "formatSettings": {
+                                        "type": "DelimitedTextReadSettings"
+                                    }
+                                },
+                                "sink": {
+                                    "type": "DelimitedTextSink",
+                                    "storeSettings": {
+                                        "type": "AzureBlobFSWriteSettings"
+                                    },
+                                    "formatSettings": {
+                                        "type": "DelimitedTextWriteSettings",
+                                        "quoteAllText": true,
+                                        "fileExtension": ".txt"
+                                    }
+                                },
+                                "enableStaging": false,
+                                "translator": {
+                                    "type": "TabularTranslator",
+                                    "typeConversion": true,
+                                    "typeConversionSettings": {
+                                        "allowDataTruncation": true,
+                                        "treatBooleanAsNumber": false
+                                    }
+                                }
+                            },
+                            "inputs": [
+                                {
+                                    "referenceName": "DS_ABLB_client_flat_files",
+                                    "type": "DatasetReference",
+                                    "parameters": {
+                                        "PRM_DS_FILE_SYSTEM": {
+                                            "value": "@pipeline().parameters.PRM_PL_SRC_FILE_SYSTEM",
+                                            "type": "Expression"
+                                        },
+                                        "PRM_DS_FILE_NAME": {
+                                            "value": "@pipeline().parameters.PRM_PL_SRC_FILE_NAME",
+                                            "type": "Expression"
+                                        },
+                                        "PRM_DS_COLUMN_DELIMITER": {
+                                            "value": "@pipeline().parameters.PRM_PL_SRC_COLUMN_DELIMITER",
+                                            "type": "Expression"
+                                        }
+                                    }
+                                }
+                            ],
+                            "outputs": [
+                                {
+                                    "referenceName": "DS_ADLS_RAW_TARGET",
+                                    "type": "DatasetReference",
+                                    "parameters": {
+                                        "PRM_DS_FILE_SYSTEM": {
+                                            "value": "@pipeline().parameters.PRM_PL_SNK_FILE_SYSTEM",
+                                            "type": "Expression"
+                                        },
+                                        "PRM_DS_FILE_DIRECTORY": {
+                                            "value": "@pipeline().parameters.PRM_PL_SNK_FILE_DIRECTORY",
+                                            "type": "Expression"
+                                        },
+                                        "PRM_DS_FILE_NAME": {
+                                            "value": "@pipeline().parameters.PRM_PL_SNK_FILE_NAME",
+                                            "type": "Expression"
+                                        },
+                                        "PRM_DS_COLUMN_DELIMITER": {
+                                            "value": "@pipeline().parameters.PRM_PL_SNK_COLUMN_DELIMITER",
+                                            "type": "Expression"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    ],
+                    "ifTrueActivities": [
+                        {
+                            "name": "ACT_GEN_EPIPE_TXT_COPY_SRC_TO_RAW_TARGET",
+                            "type": "ExecutePipeline",
+                            "dependsOn": [],
+                            "policy": {
+                                "secureInput": false
+                            },
+                            "userProperties": [],
+                            "typeProperties": {
+                                "pipeline": {
+                                    "referenceName": "PL_SUB_COPY_TXT_SRC_TO_RAW_TARGET",
+                                    "type": "PipelineReference"
+                                },
+                                "waitOnCompletion": true,
+                                "parameters": {
+                                    "PRM_PL_SRC_FILE_SYSTEM": {
+                                        "value": "@pipeline().parameters.PRM_PL_SRC_FILE_SYSTEM",
+                                        "type": "Expression"
+                                    },
+                                    "PRM_PL_SRC_FILE_NAME": {
+                                        "value": "@pipeline().parameters.PRM_PL_SRC_FILE_NAME",
+                                        "type": "Expression"
+                                    },
+                                    "PRM_PL_SNK_FILE_SYSTEM": {
+                                        "value": "@pipeline().parameters.PRM_PL_SNK_FILE_SYSTEM",
+                                        "type": "Expression"
+                                    },
+                                    "PRM_PL_SNK_FILE_DIRECTORY": {
+                                        "value": "@pipeline().parameters.PRM_PL_SNK_FILE_DIRECTORY",
+                                        "type": "Expression"
+                                    },
+                                    "PRM_PL_SNK_FILE_NAME": {
+                                        "value": "@pipeline().parameters.PRM_PL_SNK_FILE_NAME",
+                                        "type": "Expression"
+                                    },
+                                    "PRM_PL_SNK_COLUMN_DELIMITER": {
+                                        "value": "@pipeline().parameters.PRM_PL_SNK_COLUMN_DELIMITER",
+                                        "type": "Expression"
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        ],
+        "parameters": {
+            "PRM_PL_SRC_FILE_SYSTEM": {
+                "type": "string"
+            },
+            "PRM_PL_SRC_FILE_NAME": {
+                "type": "string"
+            },
+            "PRM_PL_SRC_COLUMN_DELIMITER": {
+                "type": "string"
+            },
+            "PRM_PL_SNK_FILE_SYSTEM": {
+                "type": "string"
+            },
+            "PRM_PL_SNK_FILE_DIRECTORY": {
+                "type": "string"
+            },
+            "PRM_PL_SNK_FILE_NAME": {
+                "type": "string"
+            },
+            "PRM_PL_SNK_COLUMN_DELIMITER": {
+                "type": "string"
+            }
+        },
+        "annotations": [],
+        "lastPublishTime": "2024-10-09T15:05:16Z"
+    },
+    "type": "Microsoft.DataFactory/factories/pipelines"
+}

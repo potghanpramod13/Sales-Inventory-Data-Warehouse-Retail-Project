@@ -1,0 +1,51 @@
+{
+    "name": "DS_ADLS_RAW_TARGET",
+    "properties": {
+        "linkedServiceName": {
+            "referenceName": "LS_ADLS_adlssalesprojectppwork",
+            "type": "LinkedServiceReference"
+        },
+        "parameters": {
+            "PRM_DS_FILE_SYSTEM": {
+                "type": "string"
+            },
+            "PRM_DS_FILE_DIRECTORY": {
+                "type": "string"
+            },
+            "PRM_DS_FILE_NAME": {
+                "type": "string"
+            },
+            "PRM_DS_COLUMN_DELIMITER": {
+                "type": "string"
+            }
+        },
+        "annotations": [],
+        "type": "DelimitedText",
+        "typeProperties": {
+            "location": {
+                "type": "AzureBlobFSLocation",
+                "fileName": {
+                    "value": "@dataset().PRM_DS_FILE_NAME",
+                    "type": "Expression"
+                },
+                "folderPath": {
+                    "value": "@dataset().PRM_DS_FILE_DIRECTORY",
+                    "type": "Expression"
+                },
+                "fileSystem": {
+                    "value": "@dataset().PRM_DS_FILE_SYSTEM",
+                    "type": "Expression"
+                }
+            },
+            "columnDelimiter": {
+                "value": "@dataset().PRM_DS_COLUMN_DELIMITER",
+                "type": "Expression"
+            },
+            "escapeChar": "\\",
+            "firstRowAsHeader": true,
+            "quoteChar": "\""
+        },
+        "schema": []
+    },
+    "type": "Microsoft.DataFactory/factories/datasets"
+}

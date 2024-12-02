@@ -1,0 +1,244 @@
+{
+    "name": "PL_SUB_SOURCE_DATABASE_INCREMENT_LOAD",
+    "properties": {
+        "activities": [
+            {
+                "name": "ACT_GEN_LKP_WATERMARKTABLE",
+                "type": "Lookup",
+                "dependsOn": [],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "source": {
+                        "type": "AzureSqlSource",
+                        "sqlReaderQuery": {
+                            "value": "SELECT \n    LastUpdatedvalue \nFROM \n    dbo.WatermarkTable \nWHERE \n    TableName = '@{pipeline().parameters.PRM_PL_TableName}';",
+                            "type": "Expression"
+                        },
+                        "queryTimeout": "02:00:00",
+                        "partitionOption": "None"
+                    },
+                    "dataset": {
+                        "referenceName": "DS_ASQL_AzureSqlWatermarkTable",
+                        "type": "DatasetReference"
+                    }
+                }
+            },
+            {
+                "name": "ACT_ITRC_IF_INITIAL_RUN_OR_SUBSEQUENT_RUN",
+                "description": "IF WATERMARKTABLE EMPTY THEN INTIAL RUN ELSE SUBSEQUENT RUN",
+                "type": "IfCondition",
+                "dependsOn": [
+                    {
+                        "activity": "ACT_GEN_LKP_WATERMARKTABLE",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "userProperties": [],
+                "typeProperties": {
+                    "expression": {
+                        "value": "@equals(activity('ACT_GEN_LKP_WATERMARKTABLE').output.firstRow.LastUpdatedvalue, '0')",
+                        "type": "Expression"
+                    },
+                    "ifFalseActivities": [
+                        {
+                            "name": "ACT_MT_COPY_TABLES_SUBSEQUET_RUN",
+                            "type": "Copy",
+                            "dependsOn": [],
+                            "policy": {
+                                "timeout": "0.12:00:00",
+                                "retry": 0,
+                                "retryIntervalInSeconds": 30,
+                                "secureOutput": false,
+                                "secureInput": false
+                            },
+                            "userProperties": [],
+                            "typeProperties": {
+                                "source": {
+                                    "type": "SqlServerSource",
+                                    "sqlReaderQuery": {
+                                        "value": "SELECT * FROM @{pipeline().parameters.PRM_PL_TableName} where @{pipeline().parameters.PRM_PL_Incremental_Column} > @{activity('ACT_GEN_LKP_WATERMARKTABLE').output.firstRow.LastUpdatedvalue} order by @{pipeline().parameters.PRM_PL_Incremental_Column} ASC;",
+                                        "type": "Expression"
+                                    },
+                                    "queryTimeout": "02:00:00",
+                                    "partitionOption": "None"
+                                },
+                                "sink": {
+                                    "type": "DelimitedTextSink",
+                                    "storeSettings": {
+                                        "type": "AzureBlobFSWriteSettings"
+                                    },
+                                    "formatSettings": {
+                                        "type": "DelimitedTextWriteSettings",
+                                        "quoteAllText": true,
+                                        "fileExtension": ".csv"
+                                    }
+                                },
+                                "enableStaging": false,
+                                "translator": {
+                                    "type": "TabularTranslator",
+                                    "typeConversion": true,
+                                    "typeConversionSettings": {
+                                        "allowDataTruncation": true,
+                                        "treatBooleanAsNumber": false
+                                    }
+                                }
+                            },
+                            "inputs": [
+                                {
+                                    "referenceName": "DS_SQL_SqlServerTable1",
+                                    "type": "DatasetReference",
+                                    "parameters": {
+                                        "PRM_DS_SCHEMA": {
+                                            "value": "@pipeline().parameters.PRM_PL_TableSchema",
+                                            "type": "Expression"
+                                        },
+                                        "PRM_DS_TABLE": {
+                                            "value": "@pipeline().parameters.PRM_PL_TableName",
+                                            "type": "Expression"
+                                        }
+                                    }
+                                }
+                            ],
+                            "outputs": [
+                                {
+                                    "referenceName": "DS_ADLS_RAW_TARGET",
+                                    "type": "DatasetReference",
+                                    "parameters": {
+                                        "PRM_DS_FILE_SYSTEM": {
+                                            "value": "@pipeline().parameters.PRM_PL_Target_File_System",
+                                            "type": "Expression"
+                                        },
+                                        "PRM_DS_FILE_DIRECTORY": {
+                                            "value": "@pipeline().parameters.PRM_PL_Target_File_Directory",
+                                            "type": "Expression"
+                                        },
+                                        "PRM_DS_FILE_NAME": {
+                                            "value": "@pipeline().parameters.PRM_PL_Target_File_Name",
+                                            "type": "Expression"
+                                        },
+                                        "PRM_DS_COLUMN_DELIMITER": ","
+                                    }
+                                }
+                            ]
+                        }
+                    ],
+                    "ifTrueActivities": [
+                        {
+                            "name": "ACT_MT_COPY_TABLES",
+                            "type": "Copy",
+                            "dependsOn": [],
+                            "policy": {
+                                "timeout": "0.12:00:00",
+                                "retry": 0,
+                                "retryIntervalInSeconds": 30,
+                                "secureOutput": false,
+                                "secureInput": false
+                            },
+                            "userProperties": [],
+                            "typeProperties": {
+                                "source": {
+                                    "type": "SqlServerSource",
+                                    "sqlReaderQuery": {
+                                        "value": "SELECT * FROM @{pipeline().parameters.PRM_PL_TableName} order by @{pipeline().parameters.PRM_PL_Incremental_Column} ASC;",
+                                        "type": "Expression"
+                                    },
+                                    "queryTimeout": "02:00:00",
+                                    "partitionOption": "None"
+                                },
+                                "sink": {
+                                    "type": "DelimitedTextSink",
+                                    "storeSettings": {
+                                        "type": "AzureBlobFSWriteSettings"
+                                    },
+                                    "formatSettings": {
+                                        "type": "DelimitedTextWriteSettings",
+                                        "quoteAllText": true,
+                                        "fileExtension": ".csv"
+                                    }
+                                },
+                                "enableStaging": false,
+                                "translator": {
+                                    "type": "TabularTranslator",
+                                    "typeConversion": true,
+                                    "typeConversionSettings": {
+                                        "allowDataTruncation": true,
+                                        "treatBooleanAsNumber": false
+                                    }
+                                }
+                            },
+                            "inputs": [
+                                {
+                                    "referenceName": "DS_SQL_SqlServerTable1",
+                                    "type": "DatasetReference",
+                                    "parameters": {
+                                        "PRM_DS_SCHEMA": {
+                                            "value": "@pipeline().parameters.PRM_PL_TableSchema",
+                                            "type": "Expression"
+                                        },
+                                        "PRM_DS_TABLE": {
+                                            "value": "@pipeline().parameters.PRM_PL_TableName",
+                                            "type": "Expression"
+                                        }
+                                    }
+                                }
+                            ],
+                            "outputs": [
+                                {
+                                    "referenceName": "DS_ADLS_RAW_TARGET",
+                                    "type": "DatasetReference",
+                                    "parameters": {
+                                        "PRM_DS_FILE_SYSTEM": {
+                                            "value": "@pipeline().parameters.PRM_PL_Target_File_System",
+                                            "type": "Expression"
+                                        },
+                                        "PRM_DS_FILE_DIRECTORY": {
+                                            "value": "@pipeline().parameters.PRM_PL_Target_File_Directory",
+                                            "type": "Expression"
+                                        },
+                                        "PRM_DS_FILE_NAME": {
+                                            "value": "@pipeline().parameters.PRM_PL_Target_File_Name",
+                                            "type": "Expression"
+                                        },
+                                        "PRM_DS_COLUMN_DELIMITER": ","
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        ],
+        "parameters": {
+            "PRM_PL_TableName": {
+                "type": "string"
+            },
+            "PRM_PL_TableSchema": {
+                "type": "string"
+            },
+            "PRM_PL_Incremental_Column": {
+                "type": "string"
+            },
+            "PRM_PL_Target_File_System": {
+                "type": "string"
+            },
+            "PRM_PL_Target_File_Directory": {
+                "type": "string"
+            },
+            "PRM_PL_Target_File_Name": {
+                "type": "string"
+            }
+        },
+        "annotations": [],
+        "lastPublishTime": "2024-10-08T15:45:44Z"
+    },
+    "type": "Microsoft.DataFactory/factories/pipelines"
+}

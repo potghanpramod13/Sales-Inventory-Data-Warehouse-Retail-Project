@@ -1,0 +1,41 @@
+{
+    "name": "PL_SUB_RAW_TO_INGESTION",
+    "properties": {
+        "activities": [
+            {
+                "name": "ACT_ADB_NOTE_RAW_TO_INGESTION",
+                "type": "DatabricksNotebook",
+                "dependsOn": [],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "notebookPath": "/Shared/Data Quality Check",
+                    "baseParameters": {
+                        "PRM_PL_CURRENT_TIMESTAMP": {
+                            "value": "@pipeline().parameters.PRM_PL_CURRENT_TIMESTAMP",
+                            "type": "Expression"
+                        }
+                    }
+                },
+                "linkedServiceName": {
+                    "referenceName": "LS_ADB_AzureDatabricks1",
+                    "type": "LinkedServiceReference"
+                }
+            }
+        ],
+        "parameters": {
+            "PRM_PL_CURRENT_TIMESTAMP": {
+                "type": "string"
+            }
+        },
+        "annotations": [],
+        "lastPublishTime": "2024-10-14T12:19:03Z"
+    },
+    "type": "Microsoft.DataFactory/factories/pipelines"
+}

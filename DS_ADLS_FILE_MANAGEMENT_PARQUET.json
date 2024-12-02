@@ -1,0 +1,42 @@
+{
+    "name": "DS_ADLS_FILE_MANAGEMENT_PARQUET",
+    "properties": {
+        "linkedServiceName": {
+            "referenceName": "LS_ADLS_adlssalesprojectppwork",
+            "type": "LinkedServiceReference"
+        },
+        "parameters": {
+            "PRM_DS_FILE_SYSTEM": {
+                "type": "string"
+            },
+            "PRM_DS_FILE_SUBFOLDER": {
+                "type": "string"
+            },
+            "PRM_DS_FILE_NAME": {
+                "type": "string"
+            }
+        },
+        "annotations": [],
+        "type": "Parquet",
+        "typeProperties": {
+            "location": {
+                "type": "AzureBlobFSLocation",
+                "fileName": {
+                    "value": "@dataset().PRM_DS_FILE_NAME",
+                    "type": "Expression"
+                },
+                "folderPath": {
+                    "value": "@dataset().PRM_DS_FILE_SUBFOLDER",
+                    "type": "Expression"
+                },
+                "fileSystem": {
+                    "value": "@dataset().PRM_DS_FILE_SYSTEM",
+                    "type": "Expression"
+                }
+            },
+            "compressionCodec": "snappy"
+        },
+        "schema": []
+    },
+    "type": "Microsoft.DataFactory/factories/datasets"
+}

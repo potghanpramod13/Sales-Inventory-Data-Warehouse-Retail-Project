@@ -1,0 +1,31 @@
+{
+    "name": "LS_ASQL_AzureSqlDatabase1",
+    "type": "Microsoft.DataFactory/factories/linkedservices",
+    "properties": {
+        "annotations": [],
+        "type": "AzureSqlDatabase",
+        "typeProperties": {
+            "server": "asql-server-salesproject-2448-pramodpotghan.database.windows.net",
+            "database": "ASQL_SalesProject_2448PramodPotghan",
+            "encrypt": "mandatory",
+            "trustServerCertificate": true,
+            "authenticationType": "SQL",
+            "userName": "asqlserveradmin",
+            "password": {
+                "type": "AzureKeyVaultSecret",
+                "store": {
+                    "referenceName": "LS_AKV_AzureKeyVault",
+                    "type": "LinkedServiceReference"
+                },
+                "secretName": "asqlserveradmin-password"
+            },
+            "alwaysEncryptedSettings": {
+                "alwaysEncryptedAkvAuthType": "ManagedIdentity"
+            }
+        },
+        "connectVia": {
+            "referenceName": "AutoResolveIntegrationRuntime",
+            "type": "IntegrationRuntimeReference"
+        }
+    }
+}

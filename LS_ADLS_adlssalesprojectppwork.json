@@ -1,0 +1,23 @@
+{
+    "name": "LS_ADLS_adlssalesprojectppwork",
+    "type": "Microsoft.DataFactory/factories/linkedservices",
+    "properties": {
+        "annotations": [],
+        "type": "AzureBlobFS",
+        "typeProperties": {
+            "sasUri": "https://adlssalesprojectppwork.dfs.core.windows.net/",
+            "sasToken": {
+                "type": "AzureKeyVaultSecret",
+                "store": {
+                    "referenceName": "LS_AKV_AzureKeyVault",
+                    "type": "LinkedServiceReference"
+                },
+                "secretName": "SAS-TOKEN-WORK-ADLS"
+            }
+        },
+        "connectVia": {
+            "referenceName": "AutoResolveIntegrationRuntime",
+            "type": "IntegrationRuntimeReference"
+        }
+    }
+}

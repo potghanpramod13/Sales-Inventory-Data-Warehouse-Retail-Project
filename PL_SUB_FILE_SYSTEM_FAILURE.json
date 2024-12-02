@@ -1,0 +1,178 @@
+{
+    "name": "PL_SUB_FILE_SYSTEM_FAILURE",
+    "properties": {
+        "activities": [
+            {
+                "name": "ACT_ITRC_FOR_ITERATE_TO_ALL_FILES_ON_FAILURE",
+                "type": "ForEach",
+                "dependsOn": [],
+                "userProperties": [],
+                "typeProperties": {
+                    "items": {
+                        "value": "@pipeline().parameters.PRM_PL_LKP_ACT_OUTPUT_VALUE",
+                        "type": "Expression"
+                    },
+                    "isSequential": true,
+                    "activities": [
+                        {
+                            "name": "ACT_GEN_META_EXISTS_FILES",
+                            "type": "GetMetadata",
+                            "dependsOn": [],
+                            "policy": {
+                                "timeout": "0.12:00:00",
+                                "retry": 0,
+                                "retryIntervalInSeconds": 30,
+                                "secureOutput": false,
+                                "secureInput": false
+                            },
+                            "userProperties": [],
+                            "typeProperties": {
+                                "dataset": {
+                                    "referenceName": "DS_ADLS_RAW_TARGET",
+                                    "type": "DatasetReference",
+                                    "parameters": {
+                                        "PRM_DS_FILE_SYSTEM": "@item().Target_Container",
+                                        "PRM_DS_FILE_DIRECTORY": {
+                                            "value": "@concat(item().Source_Name,'/',item().Target_Filefolder,'/',item().Source_Table)",
+                                            "type": "Expression"
+                                        },
+                                        "PRM_DS_FILE_NAME": {
+                                            "value": "@concat(item().Source_Table,'_',pipeline().parameters.PRM_PL_CURRENT_TIMESTAMP,'.csv')",
+                                            "type": "Expression"
+                                        },
+                                        "PRM_DS_COLUMN_DELIMITER": {
+                                            "value": "@item().Target_col_delimiter",
+                                            "type": "Expression"
+                                        }
+                                    }
+                                },
+                                "fieldList": [
+                                    "exists"
+                                ],
+                                "storeSettings": {
+                                    "type": "AzureBlobFSReadSettings",
+                                    "recursive": true,
+                                    "enablePartitionDiscovery": false
+                                },
+                                "formatSettings": {
+                                    "type": "DelimitedTextReadSettings"
+                                }
+                            }
+                        },
+                        {
+                            "name": "ACT_ITRC_IF_CHECK_FILES_EXISTS",
+                            "type": "IfCondition",
+                            "dependsOn": [
+                                {
+                                    "activity": "ACT_GEN_META_EXISTS_FILES",
+                                    "dependencyConditions": [
+                                        "Succeeded"
+                                    ]
+                                }
+                            ],
+                            "userProperties": [],
+                            "typeProperties": {
+                                "expression": {
+                                    "value": "@activity('ACT_GEN_META_EXISTS_FILES').output.exists",
+                                    "type": "Expression"
+                                },
+                                "ifTrueActivities": [
+                                    {
+                                        "name": "ACT_MT_MOVE_FILE_TO_FAILURE",
+                                        "type": "Copy",
+                                        "dependsOn": [],
+                                        "policy": {
+                                            "timeout": "0.12:00:00",
+                                            "retry": 0,
+                                            "retryIntervalInSeconds": 30,
+                                            "secureOutput": false,
+                                            "secureInput": false
+                                        },
+                                        "userProperties": [],
+                                        "typeProperties": {
+                                            "source": {
+                                                "type": "DelimitedTextSource",
+                                                "storeSettings": {
+                                                    "type": "AzureBlobFSReadSettings",
+                                                    "recursive": true,
+                                                    "enablePartitionDiscovery": false
+                                                },
+                                                "formatSettings": {
+                                                    "type": "DelimitedTextReadSettings"
+                                                }
+                                            },
+                                            "sink": {
+                                                "type": "ParquetSink",
+                                                "storeSettings": {
+                                                    "type": "AzureBlobFSWriteSettings"
+                                                },
+                                                "formatSettings": {
+                                                    "type": "ParquetWriteSettings"
+                                                }
+                                            },
+                                            "enableStaging": false,
+                                            "translator": {
+                                                "type": "TabularTranslator",
+                                                "typeConversion": true,
+                                                "typeConversionSettings": {
+                                                    "allowDataTruncation": true,
+                                                    "treatBooleanAsNumber": false
+                                                }
+                                            }
+                                        },
+                                        "inputs": [
+                                            {
+                                                "referenceName": "DS_ADLS_RAW_TARGET",
+                                                "type": "DatasetReference",
+                                                "parameters": {
+                                                    "PRM_DS_FILE_SYSTEM": "@item().Target_Container",
+                                                    "PRM_DS_FILE_DIRECTORY": {
+                                                        "value": "@concat(item().Source_Name,'/',item().Target_Filefolder,'/',item().Source_Table)",
+                                                        "type": "Expression"
+                                                    },
+                                                    "PRM_DS_FILE_NAME": {
+                                                        "value": "@concat(item().Source_Table,'_',pipeline().parameters.PRM_PL_CURRENT_TIMESTAMP,'.csv')",
+                                                        "type": "Expression"
+                                                    },
+                                                    "PRM_DS_COLUMN_DELIMITER": ","
+                                                }
+                                            }
+                                        ],
+                                        "outputs": [
+                                            {
+                                                "referenceName": "DS_ADLS_FILE_MANAGEMENT_PARQUET",
+                                                "type": "DatasetReference",
+                                                "parameters": {
+                                                    "PRM_DS_FILE_SYSTEM": "@item().Target_Container",
+                                                    "PRM_DS_FILE_SUBFOLDER": {
+                                                        "value": "@concat(item().Source_Name,'/','Failure','/',item().Target_FilePrefix)",
+                                                        "type": "Expression"
+                                                    },
+                                                    "PRM_DS_FILE_NAME": {
+                                                        "value": "@concat(item().Target_FilePrefix,'_',pipeline().parameters.PRM_PL_CURRENT_TIMESTAMP,'.parquet')",
+                                                        "type": "Expression"
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        ],
+        "parameters": {
+            "PRM_PL_LKP_ACT_OUTPUT_VALUE": {
+                "type": "Array"
+            },
+            "PRM_PL_CURRENT_TIMESTAMP": {
+                "type": "string"
+            }
+        },
+        "annotations": [],
+        "lastPublishTime": "2024-10-09T15:47:57Z"
+    },
+    "type": "Microsoft.DataFactory/factories/pipelines"
+}

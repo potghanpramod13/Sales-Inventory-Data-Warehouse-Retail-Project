@@ -1,0 +1,120 @@
+{
+    "name": "PL_SUB_FILE_SYSTEM_ARCHIVE",
+    "properties": {
+        "activities": [
+            {
+                "name": "ACT_ITRC_FOR_ITERATE_TO_ALL_FILES",
+                "type": "ForEach",
+                "dependsOn": [],
+                "userProperties": [],
+                "typeProperties": {
+                    "items": {
+                        "value": "@pipeline().parameters.PRM_PL_LKP_ACT_ARRAY_VALUE",
+                        "type": "Expression"
+                    },
+                    "isSequential": true,
+                    "activities": [
+                        {
+                            "name": "ACT_MT_MOVE_FILE_TO_ARCHIVE",
+                            "type": "Copy",
+                            "dependsOn": [],
+                            "policy": {
+                                "timeout": "0.12:00:00",
+                                "retry": 0,
+                                "retryIntervalInSeconds": 30,
+                                "secureOutput": false,
+                                "secureInput": false
+                            },
+                            "userProperties": [],
+                            "typeProperties": {
+                                "source": {
+                                    "type": "DelimitedTextSource",
+                                    "storeSettings": {
+                                        "type": "AzureBlobFSReadSettings",
+                                        "recursive": true,
+                                        "enablePartitionDiscovery": false
+                                    },
+                                    "formatSettings": {
+                                        "type": "DelimitedTextReadSettings"
+                                    }
+                                },
+                                "sink": {
+                                    "type": "ParquetSink",
+                                    "storeSettings": {
+                                        "type": "AzureBlobFSWriteSettings"
+                                    },
+                                    "formatSettings": {
+                                        "type": "ParquetWriteSettings"
+                                    }
+                                },
+                                "enableStaging": false,
+                                "translator": {
+                                    "type": "TabularTranslator",
+                                    "typeConversion": true,
+                                    "typeConversionSettings": {
+                                        "allowDataTruncation": true,
+                                        "treatBooleanAsNumber": false
+                                    }
+                                }
+                            },
+                            "inputs": [
+                                {
+                                    "referenceName": "DS_ADLS_RAW_TARGET",
+                                    "type": "DatasetReference",
+                                    "parameters": {
+                                        "PRM_DS_FILE_SYSTEM": "@item().Target_Container",
+                                        "PRM_DS_FILE_DIRECTORY": {
+                                            "value": "@concat(item().Source_Name,'/',item().Target_Filefolder,'/',item().Target_FilePrefix)",
+                                            "type": "Expression"
+                                        },
+                                        "PRM_DS_FILE_NAME": {
+                                            "value": "@concat(item().Target_FilePrefix,'_',pipeline().parameters.PRM_PL_CURRENT_TIMESTAMP,'.csv')",
+                                            "type": "Expression"
+                                        },
+                                        "PRM_DS_COLUMN_DELIMITER": ","
+                                    }
+                                }
+                            ],
+                            "outputs": [
+                                {
+                                    "referenceName": "DS_ADLS_FILE_MANAGEMENT_PARQUET",
+                                    "type": "DatasetReference",
+                                    "parameters": {
+                                        "PRM_DS_FILE_SYSTEM": "@item().Target_Container",
+                                        "PRM_DS_FILE_SUBFOLDER": "@concat(item().Source_Name,'/','Archive','/',item().Target_FilePrefix)",
+                                        "PRM_DS_FILE_NAME": "@concat(item().Target_FilePrefix,'_',pipeline().parameters.PRM_PL_CURRENT_TIMESTAMP,'.parquet')"
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        ],
+        "parameters": {
+            "PRM_PL_LKP_ACT_ARRAY_VALUE": {
+                "type": "Array"
+            },
+            "PRM_PL_CURRENT_TIMESTAMP": {
+                "type": "string"
+            }
+        },
+        "variables": {
+            "LAST_ROW": {
+                "type": "Array"
+            },
+            "last_incremental_col_val": {
+                "type": "String"
+            },
+            "Incremental_Column_Name": {
+                "type": "String"
+            },
+            "last_row_index": {
+                "type": "String"
+            }
+        },
+        "annotations": [],
+        "lastPublishTime": "2024-10-09T15:47:57Z"
+    },
+    "type": "Microsoft.DataFactory/factories/pipelines"
+}

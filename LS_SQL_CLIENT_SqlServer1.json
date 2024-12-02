@@ -1,0 +1,31 @@
+{
+    "name": "LS_SQL_CLIENT_SqlServer1",
+    "type": "Microsoft.DataFactory/factories/linkedservices",
+    "properties": {
+        "annotations": [],
+        "type": "SqlServer",
+        "typeProperties": {
+            "server": "DESKTOP-NSKERIB\\SQLEXPRESS",
+            "database": "SALES",
+            "encrypt": "mandatory",
+            "trustServerCertificate": true,
+            "authenticationType": "SQL",
+            "userName": "sqldbadmin",
+            "password": {
+                "type": "AzureKeyVaultSecret",
+                "store": {
+                    "referenceName": "LS_AKV_AzureKeyVault",
+                    "type": "LinkedServiceReference"
+                },
+                "secretName": "sqldbadmin-client"
+            },
+            "alwaysEncryptedSettings": {
+                "alwaysEncryptedAkvAuthType": "ManagedIdentity"
+            }
+        },
+        "connectVia": {
+            "referenceName": "SHIR-ASQL-2448PramodPotghan",
+            "type": "IntegrationRuntimeReference"
+        }
+    }
+}

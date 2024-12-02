@@ -1,0 +1,252 @@
+{
+    "name": "PL_SUB_UPDATE_WATERMARK_TABLE",
+    "properties": {
+        "activities": [
+            {
+                "name": "ACT_ITRC_FOR_ITERATE_TO_ALL_FILES",
+                "type": "ForEach",
+                "dependsOn": [],
+                "userProperties": [],
+                "typeProperties": {
+                    "items": {
+                        "value": "@pipeline().parameters.PRM_PL_LKP_ACT_ARRAY_VALUE",
+                        "type": "Expression"
+                    },
+                    "isSequential": true,
+                    "activities": [
+                        {
+                            "name": "ACT_GEN_IF_INCREMENTAL_TABLES_COLUMN_UPDATE",
+                            "type": "IfCondition",
+                            "dependsOn": [],
+                            "userProperties": [],
+                            "typeProperties": {
+                                "expression": {
+                                    "value": "@and(equals(item().Source_Name,'database'), or(equals(item().Target_FilePrefix,'ORDER_DETAILS'), equals(item().Target_FilePrefix, 'ORDER_HEADER')))",
+                                    "type": "Expression"
+                                },
+                                "ifTrueActivities": [
+                                    {
+                                        "name": "ACT_GEN_SPRC_UPDATE_WATERMARKTABLE",
+                                        "type": "SqlServerStoredProcedure",
+                                        "dependsOn": [
+                                            {
+                                                "activity": "ACT_GEN_SETVAR_INCREMENT_COL_VALUE",
+                                                "dependencyConditions": [
+                                                    "Succeeded"
+                                                ]
+                                            }
+                                        ],
+                                        "policy": {
+                                            "timeout": "0.12:00:00",
+                                            "retry": 0,
+                                            "retryIntervalInSeconds": 30,
+                                            "secureOutput": false,
+                                            "secureInput": false
+                                        },
+                                        "userProperties": [],
+                                        "typeProperties": {
+                                            "storedProcedureName": "[dbo].[UpdateWatermarkTable]",
+                                            "storedProcedureParameters": {
+                                                "PRM_LastRunTime": {
+                                                    "value": {
+                                                        "value": "@{formatDateTime(concat(substring(pipeline().parameters.PRM_PL_CURRENT_TIMESTAMP, 0,4), '-', substring(pipeline().parameters.PRM_PL_CURRENT_TIMESTAMP, 4, 2), '-', substring(pipeline().parameters.PRM_PL_CURRENT_TIMESTAMP, 6, 2), 'T', substring(pipeline().parameters.PRM_PL_CURRENT_TIMESTAMP, 8, 2), ':', substring(pipeline().parameters.PRM_PL_CURRENT_TIMESTAMP, 10, 2), ':', substring(pipeline().parameters.PRM_PL_CURRENT_TIMESTAMP, 12, 2)), 'yyyy-MM-ddTHH:mm:ss')}",
+                                                        "type": "Expression"
+                                                    },
+                                                    "type": "DateTime"
+                                                },
+                                                "PRM_LastUpdatedValue": {
+                                                    "value": {
+                                                        "value": "@variables('last_incremental_col_val')",
+                                                        "type": "Expression"
+                                                    },
+                                                    "type": "String"
+                                                },
+                                                "PRM_TableName": {
+                                                    "value": {
+                                                        "value": "@item().Target_FilePrefix",
+                                                        "type": "Expression"
+                                                    },
+                                                    "type": "String"
+                                                }
+                                            }
+                                        },
+                                        "linkedServiceName": {
+                                            "referenceName": "LS_ASQL_AzureSqlDatabase1",
+                                            "type": "LinkedServiceReference"
+                                        }
+                                    },
+                                    {
+                                        "name": "ACT_GEN_LKP_READ_FILE",
+                                        "type": "Lookup",
+                                        "dependsOn": [],
+                                        "policy": {
+                                            "timeout": "0.12:00:00",
+                                            "retry": 0,
+                                            "retryIntervalInSeconds": 30,
+                                            "secureOutput": false,
+                                            "secureInput": false
+                                        },
+                                        "userProperties": [],
+                                        "typeProperties": {
+                                            "source": {
+                                                "type": "ParquetSource",
+                                                "storeSettings": {
+                                                    "type": "AzureBlobFSReadSettings",
+                                                    "recursive": true,
+                                                    "enablePartitionDiscovery": false
+                                                },
+                                                "formatSettings": {
+                                                    "type": "ParquetReadSettings"
+                                                }
+                                            },
+                                            "dataset": {
+                                                "referenceName": "DS_ADLS_FILE_MANAGEMENT_PARQUET",
+                                                "type": "DatasetReference",
+                                                "parameters": {
+                                                    "PRM_DS_FILE_SYSTEM": {
+                                                        "value": "@item().Target_Container",
+                                                        "type": "Expression"
+                                                    },
+                                                    "PRM_DS_FILE_SUBFOLDER": {
+                                                        "value": "@concat(item().Source_Name,'/','Archive','/',item().Target_FilePrefix)",
+                                                        "type": "Expression"
+                                                    },
+                                                    "PRM_DS_FILE_NAME": {
+                                                        "value": "@concat(item().Target_FilePrefix,'_',pipeline().parameters.PRM_PL_CURRENT_TIMESTAMP,'.parquet')",
+                                                        "type": "Expression"
+                                                    }
+                                                }
+                                            },
+                                            "firstRowOnly": false
+                                        }
+                                    },
+                                    {
+                                        "name": "ACT_GEN_SETVAR_LAST_ROW",
+                                        "type": "SetVariable",
+                                        "dependsOn": [
+                                            {
+                                                "activity": "ACT_GEN_SETVAR_LAST_ROW_INDEX",
+                                                "dependencyConditions": [
+                                                    "Succeeded"
+                                                ]
+                                            }
+                                        ],
+                                        "policy": {
+                                            "secureOutput": false,
+                                            "secureInput": false
+                                        },
+                                        "userProperties": [],
+                                        "typeProperties": {
+                                            "variableName": "LAST_ROW",
+                                            "value": {
+                                                "value": "@array(activity('ACT_GEN_LKP_READ_FILE').output.value[int(variables('last_row_index'))])",
+                                                "type": "Expression"
+                                            }
+                                        }
+                                    },
+                                    {
+                                        "name": "ACT_GEN_SETVAR_INCREMENT_COL_VALUE",
+                                        "type": "SetVariable",
+                                        "dependsOn": [
+                                            {
+                                                "activity": "ACT_GEN_SETVAR_INCREMENT_COL_NAME",
+                                                "dependencyConditions": [
+                                                    "Succeeded"
+                                                ]
+                                            }
+                                        ],
+                                        "policy": {
+                                            "secureOutput": false,
+                                            "secureInput": false
+                                        },
+                                        "userProperties": [],
+                                        "typeProperties": {
+                                            "variableName": "last_incremental_col_val",
+                                            "value": {
+                                                "value": "@variables('LAST_ROW')[0][variables('Incremental_Column_Name')]",
+                                                "type": "Expression"
+                                            }
+                                        }
+                                    },
+                                    {
+                                        "name": "ACT_GEN_SETVAR_INCREMENT_COL_NAME",
+                                        "type": "SetVariable",
+                                        "dependsOn": [
+                                            {
+                                                "activity": "ACT_GEN_SETVAR_LAST_ROW",
+                                                "dependencyConditions": [
+                                                    "Succeeded"
+                                                ]
+                                            }
+                                        ],
+                                        "policy": {
+                                            "secureOutput": false,
+                                            "secureInput": false
+                                        },
+                                        "userProperties": [],
+                                        "typeProperties": {
+                                            "variableName": "Incremental_Column_Name",
+                                            "value": {
+                                                "value": "@item().Incremental_Column_Name",
+                                                "type": "Expression"
+                                            }
+                                        }
+                                    },
+                                    {
+                                        "name": "ACT_GEN_SETVAR_LAST_ROW_INDEX",
+                                        "type": "SetVariable",
+                                        "dependsOn": [
+                                            {
+                                                "activity": "ACT_GEN_LKP_READ_FILE",
+                                                "dependencyConditions": [
+                                                    "Succeeded"
+                                                ]
+                                            }
+                                        ],
+                                        "policy": {
+                                            "secureOutput": false,
+                                            "secureInput": false
+                                        },
+                                        "userProperties": [],
+                                        "typeProperties": {
+                                            "variableName": "last_row_index",
+                                            "value": {
+                                                "value": "@{sub(length(activity('ACT_GEN_LKP_READ_FILE').output.value),1)}",
+                                                "type": "Expression"
+                                            }
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        ],
+        "parameters": {
+            "PRM_PL_LKP_ACT_ARRAY_VALUE": {
+                "type": "Array"
+            },
+            "PRM_PL_CURRENT_TIMESTAMP": {
+                "type": "string"
+            }
+        },
+        "variables": {
+            "LAST_ROW": {
+                "type": "Array"
+            },
+            "last_incremental_col_val": {
+                "type": "String"
+            },
+            "Incremental_Column_Name": {
+                "type": "String"
+            },
+            "last_row_index": {
+                "type": "String"
+            }
+        },
+        "annotations": [],
+        "lastPublishTime": "2024-10-09T15:47:57Z"
+    },
+    "type": "Microsoft.DataFactory/factories/pipelines"
+}

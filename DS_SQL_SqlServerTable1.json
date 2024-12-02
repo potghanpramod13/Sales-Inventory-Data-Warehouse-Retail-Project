@@ -1,0 +1,31 @@
+{
+    "name": "DS_SQL_SqlServerTable1",
+    "properties": {
+        "linkedServiceName": {
+            "referenceName": "LS_SQL_CLIENT_SqlServer1",
+            "type": "LinkedServiceReference"
+        },
+        "parameters": {
+            "PRM_DS_SCHEMA": {
+                "type": "string"
+            },
+            "PRM_DS_TABLE": {
+                "type": "string"
+            }
+        },
+        "annotations": [],
+        "type": "SqlServerTable",
+        "schema": [],
+        "typeProperties": {
+            "schema": {
+                "value": "@dataset().PRM_DS_SCHEMA",
+                "type": "Expression"
+            },
+            "table": {
+                "value": "@dataset().PRM_DS_TABLE",
+                "type": "Expression"
+            }
+        }
+    },
+    "type": "Microsoft.DataFactory/factories/datasets"
+}

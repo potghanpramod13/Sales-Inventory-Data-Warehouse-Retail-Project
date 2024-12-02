@@ -1,0 +1,382 @@
+{
+    "name": "PL_LOAD_SOURCE_TO_RAW_LAYER",
+    "properties": {
+        "activities": [
+            {
+                "name": "ACT_GEN_LKP_CONFIG_FILE",
+                "type": "Lookup",
+                "dependsOn": [
+                    {
+                        "activity": "ACT_GEN_SETVAR_CURRENT_TIMESTAMP",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "source": {
+                        "type": "JsonSource",
+                        "storeSettings": {
+                            "type": "AzureBlobFSReadSettings",
+                            "recursive": true,
+                            "enablePartitionDiscovery": false
+                        },
+                        "formatSettings": {
+                            "type": "JsonReadSettings"
+                        }
+                    },
+                    "dataset": {
+                        "referenceName": "DS_ADLS_CONFIG_JSON",
+                        "type": "DatasetReference",
+                        "parameters": {
+                            "PRM_DS_FILE_SYSTEM": "config",
+                            "PRM_DS_FILE_NAME": "config_src_to_raw.json"
+                        }
+                    },
+                    "firstRowOnly": false
+                }
+            },
+            {
+                "name": "ACT_ITRC_FOR_CONFIG _FILE",
+                "type": "ForEach",
+                "dependsOn": [
+                    {
+                        "activity": "ACT_GEN_LKP_CONFIG_FILE",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "userProperties": [],
+                "typeProperties": {
+                    "items": {
+                        "value": "@activity('ACT_GEN_LKP_CONFIG_FILE').output.value",
+                        "type": "Expression"
+                    },
+                    "isSequential": true,
+                    "activities": [
+                        {
+                            "name": "ACT_ITRC_Switch_conditions",
+                            "type": "Switch",
+                            "dependsOn": [
+                                {
+                                    "activity": "ACT_GEN_SPRC_CREATE_WATERMARKTABLE_SET_LASTVALUE_TO_0",
+                                    "dependencyConditions": [
+                                        "Succeeded"
+                                    ]
+                                }
+                            ],
+                            "userProperties": [],
+                            "typeProperties": {
+                                "on": {
+                                    "value": "@item().Source_Name",
+                                    "type": "Expression"
+                                },
+                                "cases": [
+                                    {
+                                        "value": "database",
+                                        "activities": [
+                                            {
+                                                "name": "PL_EPIPE_DATABASE_ALL_TABLES",
+                                                "type": "ExecutePipeline",
+                                                "dependsOn": [],
+                                                "policy": {
+                                                    "secureInput": false
+                                                },
+                                                "userProperties": [],
+                                                "typeProperties": {
+                                                    "pipeline": {
+                                                        "referenceName": "PL_SUB_DATABASE_ALL_TABLES",
+                                                        "type": "PipelineReference"
+                                                    },
+                                                    "waitOnCompletion": true,
+                                                    "parameters": {
+                                                        "PRM_PL_Source_Table": {
+                                                            "value": "@item().Source_Table",
+                                                            "type": "Expression"
+                                                        },
+                                                        "PRM_PL_Incremental_column": {
+                                                            "value": "@item().Incremental_Column_Name",
+                                                            "type": "Expression"
+                                                        },
+                                                        "PRM_PL_Target_Container": {
+                                                            "value": "@item().Target_Container",
+                                                            "type": "Expression"
+                                                        },
+                                                        "PRM_PL_Target_FileFolder": {
+                                                            "value": "@item().Target_Filefolder",
+                                                            "type": "Expression"
+                                                        },
+                                                        "PRM_PL_Target_FilePrefix": {
+                                                            "value": "@item().Target_FilePrefix",
+                                                            "type": "Expression"
+                                                        },
+                                                        "PRM_PL_Target_File_Name": {
+                                                            "value": "@concat(item().Target_FilePrefix,'_',variables('CURRENT_TIMESTAMP'),'.csv')",
+                                                            "type": "Expression"
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "value": "blobstorage",
+                                        "activities": [
+                                            {
+                                                "name": "ACT_GEN_EPIPE_BLOBSTORAGE",
+                                                "type": "ExecutePipeline",
+                                                "dependsOn": [],
+                                                "policy": {
+                                                    "secureInput": false
+                                                },
+                                                "userProperties": [],
+                                                "typeProperties": {
+                                                    "pipeline": {
+                                                        "referenceName": "PL_SUB_COPY_BLOBSTORAGE_FILES",
+                                                        "type": "PipelineReference"
+                                                    },
+                                                    "waitOnCompletion": true,
+                                                    "parameters": {
+                                                        "PRM_PL_SRC_FILE_SYSTEM": {
+                                                            "value": "@item().Source_container",
+                                                            "type": "Expression"
+                                                        },
+                                                        "PRM_PL_SRC_FILE_NAME": {
+                                                            "value": "@item().Source_file",
+                                                            "type": "Expression"
+                                                        },
+                                                        "PRM_PL_SRC_COLUMN_DELIMITER": {
+                                                            "value": "@item().Source_col_delimiter",
+                                                            "type": "Expression"
+                                                        },
+                                                        "PRM_PL_SNK_FILE_SYSTEM": {
+                                                            "value": "@item().Target_Container",
+                                                            "type": "Expression"
+                                                        },
+                                                        "PRM_PL_SNK_FILE_DIRECTORY": {
+                                                            "value": "@concat(item().Source_Name,'/',item().Target_Filefolder,'/',item().Target_FilePrefix)",
+                                                            "type": "Expression"
+                                                        },
+                                                        "PRM_PL_SNK_FILE_NAME": {
+                                                            "value": "@concat(item().Target_FilePrefix,'_',variables('CURRENT_TIMESTAMP'),'.csv')",
+                                                            "type": "Expression"
+                                                        },
+                                                        "PRM_PL_SNK_COLUMN_DELIMITER": ","
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "name": "ACT_GEN_SPRC_CREATE_WATERMARKTABLE_SET_LASTVALUE_TO_0",
+                            "type": "SqlServerStoredProcedure",
+                            "dependsOn": [],
+                            "policy": {
+                                "timeout": "0.12:00:00",
+                                "retry": 0,
+                                "retryIntervalInSeconds": 30,
+                                "secureOutput": false,
+                                "secureInput": false
+                            },
+                            "userProperties": [],
+                            "typeProperties": {
+                                "storedProcedureName": "[dbo].[CreateWatermarkTableIfNotExists]",
+                                "storedProcedureParameters": {
+                                    "PRM_LastUpdatedValue": {
+                                        "value": "0",
+                                        "type": "String"
+                                    },
+                                    "PRM_TableName": {
+                                        "value": {
+                                            "value": "@item().Target_FilePrefix",
+                                            "type": "Expression"
+                                        },
+                                        "type": "String"
+                                    }
+                                }
+                            },
+                            "linkedServiceName": {
+                                "referenceName": "LS_ASQL_AzureSqlDatabase1",
+                                "type": "LinkedServiceReference"
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                "name": "ACT_GEN_SETVAR_CURRENT_TIMESTAMP",
+                "type": "SetVariable",
+                "dependsOn": [],
+                "policy": {
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "variableName": "CURRENT_TIMESTAMP",
+                    "value": {
+                        "value": "@formatDateTime(utcNow(),'yyyyMMddHHmmss')",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "ACT_GEN_EPIPE_FAILURE",
+                "type": "ExecutePipeline",
+                "dependsOn": [
+                    {
+                        "activity": "ACT_ITRC_FOR_CONFIG _FILE",
+                        "dependencyConditions": [
+                            "Failed"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "pipeline": {
+                        "referenceName": "PL_SUB_FILE_SYSTEM_FAILURE",
+                        "type": "PipelineReference"
+                    },
+                    "waitOnCompletion": true,
+                    "parameters": {
+                        "PRM_PL_LKP_ACT_OUTPUT_VALUE": {
+                            "value": "@activity('ACT_GEN_LKP_CONFIG_FILE').output.value\n",
+                            "type": "Expression"
+                        },
+                        "PRM_PL_CURRENT_TIMESTAMP": {
+                            "value": "@variables('CURRENT_TIMESTAMP')",
+                            "type": "Expression"
+                        }
+                    }
+                }
+            },
+            {
+                "name": "PL_GEN_EPIPE_ARCHIVE_AND_UPDATE_WATERMARKTABLE",
+                "type": "ExecutePipeline",
+                "dependsOn": [
+                    {
+                        "activity": "ACT_ITRC_FOR_CONFIG _FILE",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "pipeline": {
+                        "referenceName": "PL_SUB_FILE_SYSTEM_ARCHIVE",
+                        "type": "PipelineReference"
+                    },
+                    "waitOnCompletion": true,
+                    "parameters": {
+                        "PRM_PL_LKP_ACT_ARRAY_VALUE": {
+                            "value": "@activity('ACT_GEN_LKP_CONFIG_FILE').output.value\n",
+                            "type": "Expression"
+                        },
+                        "PRM_PL_CURRENT_TIMESTAMP": {
+                            "value": "@variables('CURRENT_TIMESTAMP')",
+                            "type": "Expression"
+                        }
+                    }
+                }
+            },
+            {
+                "name": "PL_GEN_EPIPE_UPDATE_WATERMARKTABLE_copy1",
+                "type": "ExecutePipeline",
+                "dependsOn": [
+                    {
+                        "activity": "PL_GEN_EPIPE_ARCHIVE_AND_UPDATE_WATERMARKTABLE",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "pipeline": {
+                        "referenceName": "PL_SUB_UPDATE_WATERMARK_TABLE",
+                        "type": "PipelineReference"
+                    },
+                    "waitOnCompletion": true,
+                    "parameters": {
+                        "PRM_PL_LKP_ACT_ARRAY_VALUE": {
+                            "value": "@activity('ACT_GEN_LKP_CONFIG_FILE').output.value\n",
+                            "type": "Expression"
+                        },
+                        "PRM_PL_CURRENT_TIMESTAMP": {
+                            "value": "@variables('CURRENT_TIMESTAMP')",
+                            "type": "Expression"
+                        }
+                    }
+                }
+            },
+            {
+                "name": "PL_GEN_EPIPE_RAW_TO_INGESTION",
+                "type": "ExecutePipeline",
+                "dependsOn": [
+                    {
+                        "activity": "PL_GEN_EPIPE_UPDATE_WATERMARKTABLE_copy1",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "pipeline": {
+                        "referenceName": "PL_SUB_RAW_TO_INGESTION",
+                        "type": "PipelineReference"
+                    },
+                    "waitOnCompletion": true,
+                    "parameters": {
+                        "PRM_PL_CURRENT_TIMESTAMP": {
+                            "value": "@variables('CURRENT_TIMESTAMP')",
+                            "type": "Expression"
+                        }
+                    }
+                }
+            }
+        ],
+        "variables": {
+            "CURRENT_TIMESTAMP": {
+                "type": "String"
+            },
+            "LAST_ROW": {
+                "type": "Array"
+            },
+            "last_incremental_col_val": {
+                "type": "String"
+            },
+            "last_row_index": {
+                "type": "String"
+            }
+        },
+        "annotations": [],
+        "lastPublishTime": "2024-10-14T12:13:01Z"
+    },
+    "type": "Microsoft.DataFactory/factories/pipelines"
+}
