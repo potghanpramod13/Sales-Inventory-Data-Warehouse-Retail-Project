@@ -156,6 +156,5 @@ This project includes:
 1. **Source to ADLS Raw LLD**: Detailed data mappings.
 2. **ADLS to Integration Layer**: Transformation rules.
 3. **Fact & Dimension Models**: Data model layouts.
-4. **Audit Logging Use Case**: Error handling and logging processes.
 
 ---
